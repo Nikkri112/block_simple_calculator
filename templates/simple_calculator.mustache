@@ -10,7 +10,7 @@
     </button>
     <div id='attention' style='display:none'></div>
     <div id="tester" style = 'width:100%'></div>
-    <div class="modal" tabindex="-1" id="exampleModal" data-backdrop="false">
+    <div class="modal" tabindex="-1" id="exampleModal" data-backdrop="true">
         <div class="modal-dialog modal-lg w-75">
             <div class="modal-content">
                 <div class="modal-header">
@@ -30,6 +30,8 @@
     </div>
 </div>
     {{#js}}
+    modalNode = document.getElementById('exampleModal')
+    document.getElementById('exampleModal').remove()
     attentionDiv = document.getElementById('attention')
     resultArray = {{{results}}}
     gradeArray = []
@@ -180,6 +182,7 @@
                     t:30
                 },
                 autosize:true,
+                dragmode:false,
                 polar: {
                     radialaxis: {
                     visible: true,
@@ -196,6 +199,7 @@
             title:titleObj,
             showlegend: true,
             }
+        document.getElementById("page").appendChild(modalNode)
         tracesArray.forEach((obj)=>data.push(obj))
         var config = {scrollZoom:true,responsive:true}
         Plotly.react('tester', data, layout,config);
