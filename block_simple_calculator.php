@@ -49,42 +49,15 @@ class block_simple_calculator extends block_base {
         $courseQuizes = $DB->get_records('quiz',['course'=>$courseID]);
         $timeCreatedArray = [];
         $yearsArray = [];
-        $latestYearQuizIds = [];
-        $prevYearQuizIds = [];
+        $quizIds = [];
         $uniqueString = get_config('simple_calculator','uniqueString_setting');
 
-        //Проходимся по всем тестам курса и собираем возможные года и названия тестов
+        //Снова проходимся по всем тестам курса и получаем ID тестов за последний год
 
         foreach($courseQuizes as $quiz){
             foreach($testnames as $name){
-                if(str_contains($quiz->name,$name)){
-                    array_push($yearsArray,date('Y',$quiz->timecreated));
-                    array_push($timeCreatedArray,$quiz->timecreated);
-                }
-            }
-        }
-
-        $yearsArray = array_unique($yearsArray);
-        $latest = max($timeCreatedArray);
-
-        //Снова проходимся по всем тестам курса и получаем ID тестов за последний год
-        $latestYear = max($yearsArray);
-
-        foreach($courseQuizes as $quiz){
-            if(date('Y',$quiz->timecreated)==$latestYear){
-                foreach($testnames as $name){
-                    if(str_contains($quiz->name,$name) && str_contains($quiz->name,$uniqueString)){
-                        array_push($latestYearQuizIds,$quiz->id);
-                    }
-                }
-            }
-            else{
-                if(date('Y',$quiz->timecreated)<$latestYear){
-                    foreach($testnames as $name){
-                        if(str_contains($quiz->name,$name) && str_contains($quiz->name,$uniqueString)){
-                            array_push($prevYearQuizIds,$quiz->id);
-                        }
-                    }
+                if(str_contains($quiz->name,$name) && str_contains($quiz->name,$uniqueString)){
+                    array_push($quizIds,$quiz->id);
                 }
             }
         }
@@ -154,38 +127,21 @@ class block_simple_calculator extends block_base {
             //Если мы рассматриваем результаты последнего года, то выводим среднее и предыдущий результат текущего года
             //А если рассматриваем результаты предыдущих годов то выводим только результат, год и название
 
-            if($islastyear){$results = (object) 
+            $results = (object) 
                 ['finalGrade'=>$finalgrade,
                 'averageGrade'=>$average,
                 'testName'=>$testname,
                 'quizId' =>$testid,
+                'year'=>$quizYear,
                 //Обьект для передачи результатов предыдущих годов
                 'prevYearResults'=>[],
                 'tried' =>$tried
-                ];}
-            else{$results = (object) ['finalGrade'=>$finalgrade,'year'=>$quizYear,'testName'=>$testname,'tried' =>$tried];}
+                ];
             $i++;
-        return $results;
+            return $results;
         };
-        $latestYearResults = [];
-        $prevYearResults = [];
-
-        //Вносим в массив результаты предыдущих годов
-
-         foreach($prevYearQuizIds as $quizid){
-            $quiz = $DB->get_record('quiz',['id'=>$quizid]);   
-            $quizname =$quiz->name;
-            foreach($testnames as $name){
-                if(str_contains($quizname,$name)){
-                    $quizname = $name;
-                }
-            }
-            array_push($prevYearResults, aquire_results($quizid,$quizname,false));
-        }
-
-        //Вносим в массив результаты последнего года
-        
-        foreach($latestYearQuizIds as $quizid){
+        $quizResults = []; 
+        foreach($quizIds as $quizid){
             $quiz = $DB->get_record('quiz',['id'=>$quizid]);   
             $quizname = $quiz->name;
             foreach($testnames as $name){
@@ -193,26 +149,17 @@ class block_simple_calculator extends block_base {
                     $quizname = $name;
                 }
             }
-            array_push($latestYearResults, aquire_results($quizid,$quizname,true));
+            array_push($quizResults, aquire_results($quizid,$quizname,true));
         }
 
         //Если названия тестов совпадают, то вносим результат предыдущего года в массив prevYearResults
-
-        foreach($latestYearResults as $res){
-            foreach($prevYearResults as $result){
-                if($result->testName == $res->testName){
-                    $r=(object)['year'=>$result->year,'grade'=>$result->finalGrade,'tried'=>$result->tried];
-                    array_push($res->prevYearResults, $r);
-                }
-            }
-        }
 
         //НУЖНОЕ
 
         $renderer = $this->page->get_renderer('block_simple_calculator');
         $this->content = new stdClass();
         $this->content->text = '';
-        $this->content->text .= $renderer->render_calculator($latestYearResults);
+        $this->content->text .= $renderer->render_calculator($quizResults);
         return $this->content;
     }
     function has_config() {

@@ -34,21 +34,26 @@
     document.getElementById('exampleModal').remove()
     attentionDiv = document.getElementById('attention')
     resultArray = {{{results}}}
-    gradeArray = []
-    averageArray = []
     namesArray = []
     console.log(resultArray)
 
-    function dataObjectCreate(year,array){  
+
+    function dataObjectCreate(year,array,name='',lining='solid',myopacity=0.6){  
+        if(name==''){
+            name = year
+        }
         obj={
                 type: 'scatterpolar',
                 r: array,
                 theta: namesArray,
                 fill: 'toself',
-                name: year,
-                opacity: 0.7,
+                name: name,
+                opacity: myopacity,
                 hovertemplate:'%{r}%',
                 zorder: 0,
+                line:{
+                    dash:lining,
+                }
             } 
         return(obj)
     }
@@ -63,94 +68,48 @@
     lastQuizDone = false
 
     for(let i=0;i<resultArray.length;i++){
-        if(resultArray[i].tried==true){
-            lastQuizDone = true
-        }
-        gradeArray.push(resultArray[i].finalGrade)
-        averageArray.push(resultArray[i].averageGrade)
-        namesArray.push(resultArray[i].testName)
-        for(let j=0;j<resultArray[i].prevYearResults.length;j++){
-              yearsArray.push(resultArray[i].prevYearResults[j].year)
-        }
+        yearsArray.push(parseInt(resultArray[i].year))
     }
-
     yearsArray = yearsArray.filter(onlyUnique)
-    for(let i=0;i<yearsArray.length;i++){
-        yearsArray[i] = parseInt(yearsArray[i])
+
+    for(let i=0;i<resultArray.length;i++){
+        namesArray.push(resultArray[i].testName)
     }
+    namesArray = namesArray.filter(onlyUnique)
 
     for(let i=0;i<yearsArray.length;i++){
         triedThisYear = false
         newArray = []
+        averageArray = []
         for(let j=0;j<resultArray.length;j++){
-            if(resultArray[j].prevYearResults.length==0){
-                    newArray.push(0)
-                }
-            else{
-                if(resultArray[j].prevYearResults.some(o => o.year == yearsArray[i])){
-                    for(let o = 0;o<resultArray[j].prevYearResults.length;o++){
-                        if(resultArray[j].prevYearResults[o].year==yearsArray[i]){
-                            newArray.push(resultArray[j].prevYearResults[o].grade)
-                        }
+            if(resultArray[j].year == yearsArray[i]){            
+                newArray.push(resultArray[j].finalGrade)
+                averageArray.push(resultArray[j].averageGrade)
+                if(resultArray[j].tried){
+                    triedThisYear = true
                     }
                 }
-                else{
-                    newArray.push(0)
-                }
             }
+        if(triedThisYear && newArray.length==namesArray.length){
+            newArray.push(newArray[0])
+            averageArray.push(averageArray[0])
+            if(yearsArray[i]==Math.max(...yearsArray)){
+                tracesArray.push(dataObjectCreate(yearsArray[i],newArray,'Последний результат','solid',1))
+                tracesArray.push(dataObjectCreate(yearsArray[i],averageArray,'Среднее','dash',0.7))
+                }
+            else{
+                tracesArray.push(dataObjectCreate(yearsArray[i],newArray))
+                tracesArray.push(dataObjectCreate(yearsArray[i],averageArray,`Среднее ${yearsArray[i]}`,'dash'))
+                }
+            }    
         }
-        newArray.push(newArray[0])
-        tracesArray.push(dataObjectCreate(yearsArray[i],newArray))
-    }
-    gradeArray.push(gradeArray[0])
-    averageArray.push(averageArray[0])
-    namesArray.push(namesArray[0])
-
-
-    gradeObject = {type: 'scatterpolar'}
-
-    if(lastQuizDone){
-        gradeObject = {
-            type: 'scatterpolar',
-                r: gradeArray,
-                theta: namesArray,
-                fill: 'toself',
-                name: 'Личный результат',
-                hovertemplate:'%{r}%',
-                marker: { size: 12 },
-        }
-    }
-
-
-    titleObj = {}
-
-    if(!lastQuizDone){
-        attentionDiv.style = 'display:block; '
-        attentionDiv.innerHTML = 'Крайний тест не был выполнен'
-    }
-    else{
-        titleObj={}
-    }
 
 	TESTER = document.getElementById('tester');
-	    data = [
-           gradeObject,
-            {
-                type: 'scatterpolar',
-                r: averageArray,
-                theta: namesArray,
-                fill: 'toself',
-                opacity: 0.4,
-                name: 'Среднее',
-                hovertemplate:'%{r}%',
-                zorder: 0,
-            },
-            ]
+	    data = []
             layout = {
                 legend:{
                     orientation:'h',
                     tracegroupgap:0,
-                    borderwidth:1,
                     itemwidth:20,
                     entrywidthmode:'pixels',
                 },
@@ -175,7 +134,6 @@
                     }
                     }
             },
-            title:titleObj,
             showlegend: true,
             }
         document.getElementById("page").appendChild(modalNode)
