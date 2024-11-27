@@ -1,0 +1,191 @@
+{{!
+    This is the mustache for the time block simple calculator.
+    @template block_simple_calculator/simple_calculator
+    This template renders the entire block content.
+}}
+<script src="https://cdn.plot.ly/plotly-2.32.0.min.js" charset="utf-8"></script>
+<div class="block-calculator" style = 'flex-wrap:wrap;align-items:center'>
+    <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#exampleModal">
+        Открыть побольше
+    </button>
+    <div id='attention' style='display:none'></div>
+    <div id="tester" style = 'width:100%'></div>
+    <div class="modal" tabindex="-1" id="exampleModal" data-backdrop="true">
+        <div class="modal-dialog modal-lg w-75">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Цифровые компетенции</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div id="altTester"></div>  
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                <div>
+            </div>
+        </div>
+    </div>
+</div>
+    {{#js}}
+    modalNode = document.getElementById('exampleModal')
+    document.getElementById('exampleModal').remove()
+    attentionDiv = document.getElementById('attention')
+    resultArray = {{{results}}}
+    gradeArray = []
+    averageArray = []
+    namesArray = []
+    console.log(resultArray)
+
+    function dataObjectCreate(year,array){  
+        obj={
+                type: 'scatterpolar',
+                r: array,
+                theta: namesArray,
+                fill: 'toself',
+                name: year,
+                opacity: 0.7,
+                hovertemplate:'%{r}%',
+                zorder: 0,
+            } 
+        return(obj)
+    }
+
+    function onlyUnique(value, index, array) {
+        return array.indexOf(value) === index;
+    }
+
+    yearsArray = []
+    tracesArray = []
+
+    lastQuizDone = false
+
+    for(let i=0;i<resultArray.length;i++){
+        if(resultArray[i].tried==true){
+            lastQuizDone = true
+        }
+        gradeArray.push(resultArray[i].finalGrade)
+        averageArray.push(resultArray[i].averageGrade)
+        namesArray.push(resultArray[i].testName)
+        for(let j=0;j<resultArray[i].prevYearResults.length;j++){
+              yearsArray.push(resultArray[i].prevYearResults[j].year)
+        }
+    }
+
+    yearsArray = yearsArray.filter(onlyUnique)
+    for(let i=0;i<yearsArray.length;i++){
+        yearsArray[i] = parseInt(yearsArray[i])
+    }
+
+    for(let i=0;i<yearsArray.length;i++){
+        triedThisYear = false
+        newArray = []
+        for(let j=0;j<resultArray.length;j++){
+            if(resultArray[j].prevYearResults.length==0){
+                    newArray.push(0)
+                }
+            else{
+                if(resultArray[j].prevYearResults.some(o => o.year == yearsArray[i])){
+                    for(let o = 0;o<resultArray[j].prevYearResults.length;o++){
+                        if(resultArray[j].prevYearResults[o].year==yearsArray[i]){
+                            newArray.push(resultArray[j].prevYearResults[o].grade)
+                        }
+                    }
+                }
+                else{
+                    newArray.push(0)
+                }
+            }
+        }
+        newArray.push(newArray[0])
+        tracesArray.push(dataObjectCreate(yearsArray[i],newArray))
+    }
+    gradeArray.push(gradeArray[0])
+    averageArray.push(averageArray[0])
+    namesArray.push(namesArray[0])
+
+
+    gradeObject = {type: 'scatterpolar'}
+
+    if(lastQuizDone){
+        gradeObject = {
+            type: 'scatterpolar',
+                r: gradeArray,
+                theta: namesArray,
+                fill: 'toself',
+                name: 'Личный результат',
+                hovertemplate:'%{r}%',
+                marker: { size: 12 },
+        }
+    }
+
+
+    titleObj = {}
+
+    if(!lastQuizDone){
+        attentionDiv.style = 'display:block; '
+        attentionDiv.innerHTML = 'Крайний тест не был выполнен'
+    }
+    else{
+        titleObj={}
+    }
+
+	TESTER = document.getElementById('tester');
+	    data = [
+           gradeObject,
+            {
+                type: 'scatterpolar',
+                r: averageArray,
+                theta: namesArray,
+                fill: 'toself',
+                opacity: 0.4,
+                name: 'Среднее',
+                hovertemplate:'%{r}%',
+                zorder: 0,
+            },
+            ]
+            layout = {
+                legend:{
+                    orientation:'h',
+                    tracegroupgap:0,
+                    borderwidth:1,
+                    itemwidth:20,
+                    entrywidthmode:'pixels',
+                },
+                margin:{
+                    b:0,
+                    l:20,
+                    r:20,
+                    t:30
+                },
+                autosize:true,
+                dragmode:false,
+                polar: {
+                    radialaxis: {
+                    visible: true,
+                    range: [0, 100],
+                    tick0:0,
+                    dtick:25,
+                    tickmode:'linear',
+                    ticklabelstep:2,
+                    title:{
+                        color:'#db0f0f',
+                    }
+                    }
+            },
+            title:titleObj,
+            showlegend: true,
+            }
+        document.getElementById("page").appendChild(modalNode)
+        tracesArray.forEach((obj)=>data.push(obj))
+        var config = {scrollZoom:true,responsive:true}
+        Plotly.react('tester', data, layout,config);
+        Plotly.moveTraces('tester', 0);
+        $('#exampleModal').on('shown.bs.modal', function () {
+            Plotly.react('altTester', data, layout,config);
+            Plotly.moveTraces('altTester', 0);          
+        });
+    {{/js}}
+</div>
