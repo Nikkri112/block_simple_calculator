@@ -86,29 +86,34 @@ class block_simple_calculator extends block_base {
                 $maxGrade =1; 
             }
             $quizYear = date('Y',$quiz->timecreated);
-            $average = 0;
+            $median = [];
+            $medianfinal =0;
             $attemptcounter = 0;
             $userAttempts = [];
             $finalgrade = 0;
             if(!is_null($attempts)){
                 if (count($attempts)>0) {
-
                     //Считаем среднее и получаем попытки пользователя
-
                     foreach($attempts as $attempt){
-                        $average += $attempt->sumgrades;
+                        array_push($median,$attempt->sumgrades);
                         $attemptcounter +=1; 
                         if($attempt->userid == $USER->id){
                             array_push($userAttempts,$attempt);
                         }
                     }
-                    $average = $average/$attemptcounter;            
+                    sort($median);
+                    if(count($median)%2==0){
+                        $medianfinal = ($median[floor((count($median)-1)/2)]+$median[ceil((count($median)-1)/2)])/2;
+                    }
+                    else{
+                        $medianfinal = $median[ceil((count($median)-1)/2)];
+                    }     
                 }
             }
             //На случай если попыток нету чисто в принципе
             else{
                 $finalgrade = 0;
-                $average = 0;
+                $medianfinal = 0;
             }
             if(count($userAttempts)!=0){
                 $tried = true;
@@ -122,14 +127,14 @@ class block_simple_calculator extends block_base {
             //Считаем результаты теста в процентах
 
             $finalgrade = ($finalgrade/$maxGrade)*100;
-            $average = ($average/$maxGrade)*100;
+            $medianfinal = ($medianfinal/$maxGrade)*100;
 
             //Если мы рассматриваем результаты последнего года, то выводим среднее и предыдущий результат текущего года
             //А если рассматриваем результаты предыдущих годов то выводим только результат, год и название
 
             $results = (object) 
                 ['finalGrade'=>$finalgrade,
-                'averageGrade'=>$average,
+                'averageGrade'=>$medianfinal,
                 'testName'=>$testname,
                 'quizId' =>$testid,
                 'year'=>$quizYear,
