@@ -90,16 +90,22 @@
                     }
                 }
             }
+        if(yearsArray[i]==Math.max(...yearsArray)){
+            tracesArray.push(dataObjectCreate(yearsArray[i],averageArray,'Среднее','dash',0.7))
+        }
+        else{
+            if(triedThisYear){
+                tracesArray.push(dataObjectCreate(yearsArray[i],averageArray,`Среднее ${yearsArray[i]}`,'dash',0.7))
+            }
+        }   
         if(triedThisYear && newArray.length==namesArray.length){
             newArray.push(newArray[0])
             averageArray.push(averageArray[0])
             if(yearsArray[i]==Math.max(...yearsArray)){
                 tracesArray.push(dataObjectCreate(yearsArray[i],newArray,'Последний результат','solid',1))
-                tracesArray.push(dataObjectCreate(yearsArray[i],averageArray,'Среднее','dash',0.7))
                 }
             else{
                 tracesArray.push(dataObjectCreate(yearsArray[i],newArray))
-                tracesArray.push(dataObjectCreate(yearsArray[i],averageArray,`Среднее ${yearsArray[i]}`,'dash'))
                 }
             }    
         }
