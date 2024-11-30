@@ -36,5 +36,12 @@ if ($hassiteconfig) {
         '',  // Значение по умолчанию
         PARAM_TEXT // Тип данных
     ));
+    $settings->add(new admin_setting_configtext(
+        'simple_calculator/altCourseId_setting',   // Имя настройки
+        get_string('altCourseIdSettingName', 'block_simple_calculator'), // Название настройки (отображается на странице)
+        get_string('altCourseIdSettingDesc', 'block_simple_calculator'), // Описание настройки
+        '',  // Значение по умолчанию
+        PARAM_TEXT // Тип данных
+    ));
     $ADMIN->add('localplugins', $settings);
 }

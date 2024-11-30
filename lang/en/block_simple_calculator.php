@@ -37,4 +37,6 @@ $string['courseIDSettingDesc'] = 'Введите ID курса';
 $string['courseIDSettingName'] = 'ID курса';
 $string['uniqueStringSettingName'] = 'Уникальная строка/символ';
 $string['uniqueStringSettingDesc'] = 'Введите строку, с помощью которой можно отличить нужные тесты';
+$string['altCourseIdSettingName'] = 'ID курса для сотрудников';
+$string['altCourseIdSettingDesc'] = 'Введите ID курса для сотрудников';
 

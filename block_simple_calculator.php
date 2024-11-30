@@ -44,12 +44,15 @@ class block_simple_calculator extends block_base {
         }
         global $DB;
         global $PAGE;
+        global $USER;
+        $context = $PAGE->context;
         $courseID = intval(get_config('simple_calculator','courseId_setting'));
+        $altCourseID = intval(get_config('simple_calculator','altCourseId_setting'));
         $testnames = explode(',',get_config('simple_calculator','names_setting'),10);
         $courseQuizes = $DB->get_records('quiz',['course'=>$courseID]);
-        $timeCreatedArray = [];
-        $yearsArray = [];
+        $altCourseQuizes = $DB->get_records('quiz',['course'=>$altCourseID]);
         $quizIds = [];
+        $altQuizIds = [];
         $uniqueString = get_config('simple_calculator','uniqueString_setting');
 
         //Снова проходимся по всем тестам курса и получаем ID тестов за последний год
@@ -61,10 +64,38 @@ class block_simple_calculator extends block_base {
                 }
             }
         }
+
+        foreach($altCourseQuizes as $quiz){
+            foreach($testnames as $name){
+                if(str_contains($quiz->name,$name) && str_contains($quiz->name,$uniqueString)){
+                    array_push($altQuizIds,$quiz->id);
+                    
+                }
+            }
+        }
+
+        $isAlt = true;
+        foreach($quizIds as $testid){
+            $attempts = $DB->get_records('quiz_attempts', array('quiz' => $testid));
+            foreach($attempts as $attempt){
+                if($attempt->userid == $USER->id){
+                    $isAlt = false;
+                }
+            }
+        }
+        if($isAlt){
+            $quizIds = $altQuizIds;
+        }
         //Функция для вывода результатов теста
 
-        function aquire_results($testid,$testname,$islastyear){
-            global $USER;
+        if ($context->contextlevel == CONTEXT_USER) {
+            $userid = $context->instanceid; // ID пользователя, чей профиль просматривается
+        } else {
+            // Не в контексте профиля пользователя
+            $userid = null;
+        }
+
+        function aquire_results($testid,$testname,$islastyear,$userid){
             global $DB;
             $results = [];
             $i = 0;
@@ -97,7 +128,7 @@ class block_simple_calculator extends block_base {
                     foreach($attempts as $attempt){
                         array_push($median,$attempt->sumgrades);
                         $attemptcounter +=1; 
-                        if($attempt->userid == $USER->id){
+                        if($attempt->userid == $userid){
                             array_push($userAttempts,$attempt);
                         }
                     }
@@ -154,7 +185,7 @@ class block_simple_calculator extends block_base {
                     $quizname = $name;
                 }
             }
-            array_push($quizResults, aquire_results($quizid,$quizname,true));
+            array_push($quizResults, aquire_results($quizid,$quizname,true,$userid));
         }
 
         //Если названия тестов совпадают, то вносим результат предыдущего года в массив prevYearResults
