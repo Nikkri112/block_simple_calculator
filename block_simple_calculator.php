@@ -92,7 +92,7 @@ class block_simple_calculator extends block_base {
             $userid = $context->instanceid; // ID пользователя, чей профиль просматривается
         } else {
             // Не в контексте профиля пользователя
-            $userid = null;
+            $userid = $USER->userid;
         }
 
         function aquire_results($testid,$testname,$islastyear,$userid){
