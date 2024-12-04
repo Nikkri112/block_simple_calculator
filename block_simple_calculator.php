@@ -73,26 +73,25 @@ class block_simple_calculator extends block_base {
                 }
             }
         }
+        if ($context->contextlevel == CONTEXT_USER) {
+            $userid = $context->instanceid; // ID пользователя, чей профиль просматривается
+        } else {
+            // Не в контексте профиля пользователя
+            $userid = $USER->userid;
+        }
 
+        //Проверяем если есть попытка в педагогическом курсе
         $isAlt = true;
         foreach($quizIds as $testid){
             $attempts = $DB->get_records('quiz_attempts', array('quiz' => $testid));
             foreach($attempts as $attempt){
-                if($attempt->userid == $USER->id){
+                if($attempt->userid == $userid){
                     $isAlt = false;
                 }
             }
         }
         if($isAlt){
             $quizIds = $altQuizIds;
-        }
-        //Функция для вывода результатов теста
-
-        if ($context->contextlevel == CONTEXT_USER) {
-            $userid = $context->instanceid; // ID пользователя, чей профиль просматривается
-        } else {
-            // Не в контексте профиля пользователя
-            $userid = null;
         }
 
         function aquire_results($testid,$testname,$islastyear,$userid){
@@ -171,7 +170,8 @@ class block_simple_calculator extends block_base {
                 'year'=>$quizYear,
                 //Обьект для передачи результатов предыдущих годов
                 'prevYearResults'=>[],
-                'tried' =>$tried
+                'tried' =>$tried,
+                'timecreated' =>$quiz->timecreated,
                 ];
             $i++;
             return $results;
@@ -187,14 +187,32 @@ class block_simple_calculator extends block_base {
             }
             array_push($quizResults, aquire_results($quizid,$quizname,true,$userid));
         }
-
-        //Если названия тестов совпадают, то вносим результат предыдущего года в массив prevYearResults
+        $this->content = new stdClass();
+        $this->content->text = '';
+        $badIndexes = [];
+        for($i=0;$i<count($quizResults);$i++){
+            for($j=$i;$j<count($quizResults);$j++){
+                if($quizResults[$i]->quizId!=$quizResults[$j]->quizId){
+                    if(($quizResults[$i]->testName==$quizResults[$j]->testName) && ($quizResults[$i]->year==$quizResults[$j]->year)){
+                        if($quizResults[$i]->timecreated>=$quizResults[$j]->timecreated){
+                            array_push($badIndexes,$j);
+                        }
+                        else{
+                            array_push($badIndexes,$i);
+                        }
+                    }
+                }
+            }
+        }
+        foreach($badIndexes as $index){
+            unset($quizResults[$index]);
+        } 
+        $quizResults = array_values($quizResults);
 
         //НУЖНОЕ
 
         $renderer = $this->page->get_renderer('block_simple_calculator');
-        $this->content = new stdClass();
-        $this->content->text = '';
+       
         $this->content->text .= $renderer->render_calculator($quizResults);
         return $this->content;
     }
