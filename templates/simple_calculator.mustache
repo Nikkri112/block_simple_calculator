@@ -91,10 +91,12 @@
                 }
             }
         if(yearsArray[i]==Math.max(...yearsArray)){
+	    averageArray.push(averageArray[0])
             tracesArray.push(dataObjectCreate(yearsArray[i],averageArray,'Среднее','dash',0.7))
         }
         else{
             if(triedThisYear){
+		newArray.push(newArray[0])
                 tracesArray.push(dataObjectCreate(yearsArray[i],averageArray,`Среднее ${yearsArray[i]}`,'dash',0.7))
             }
         }   
