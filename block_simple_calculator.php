@@ -53,6 +53,8 @@ class block_simple_calculator extends block_base {
         $altCourseQuizes = $DB->get_records('quiz',['course'=>$altCourseID]);
         $quizIds = [];
         $altQuizIds = [];
+        $dpoquizids = [];
+        $altdpoquizids = [];
         $uniqueString = get_config('simple_calculator','uniqueString_setting');
 
         //Снова проходимся по всем тестам курса и получаем ID тестов за последний год
@@ -69,10 +71,26 @@ class block_simple_calculator extends block_base {
             foreach($testnames as $name){
                 if(str_contains($quiz->name,$name) && str_contains($quiz->name,$uniqueString)){
                     array_push($altQuizIds,$quiz->id);
-                    
                 }
             }
         }
+
+        foreach($courseQuizes as $quiz){
+            foreach($testnames as $name){
+                if(str_contains($quiz->name,$name) && str_contains($quiz->name,'*')){
+                    array_push($dpoquizids,$quiz->id);
+                }
+            }
+        }
+
+        foreach($altCourseQuizes as $quiz){
+            foreach($testnames as $name){
+                if(str_contains($quiz->name,$name) && str_contains($quiz->name,'*')){
+                    array_push($altdpoquizids,$quiz->id);
+                }
+            }
+        }
+
         if ($context->contextlevel == CONTEXT_USER) {
             $userid = $context->instanceid; // ID пользователя, чей профиль просматривается
         } else {
@@ -115,6 +133,7 @@ class block_simple_calculator extends block_base {
             else{
                 $maxGrade =1; 
             }
+
             $quizYear = date('Y',$quiz->timecreated);
             $median = [];
             $medianfinal =0;
@@ -153,7 +172,9 @@ class block_simple_calculator extends block_base {
                 $finalgrade = 0;
                 $tried = false;
             }
-
+            if(str_contains($quiz->name,'*')){
+                $quizYear=substr($quiz->name,strpos($quiz->name,'*')-4,4);
+            }
             //Считаем результаты теста в процентах
 
             $finalgrade = ($finalgrade/$maxGrade)*100;
@@ -187,6 +208,30 @@ class block_simple_calculator extends block_base {
             }
             array_push($quizResults, aquire_results($quizid,$quizname,true,$userid));
         }
+
+        $dpoquizresults = [];
+
+        foreach($dpoquizids as $quizid){
+            $quiz = $DB->get_record('quiz',['id'=>$quizid]);   
+            $quizname = $quiz->name;
+            foreach($testnames as $name){
+                if(str_contains($quizname,$name)){
+                    $quizname = $name;
+                }
+            }
+            array_push($dpoquizresults, aquire_results($quizid,$quizname,true,$userid));
+        }
+
+        foreach($dpoquizresults as $dpores){
+            foreach($quizResults as $res){
+                if(($dpores->testName == $res->testName) && ($dpores->year==$res->year) && ($dpores->tried)){
+                    $res->finalGrade=$dpores->finalGrade;
+                    $res->averageGrade=$dpores->averageGrade;
+                    $res->quizId=$dpores->quizId;
+                }
+            }
+        }
+
         $this->content = new stdClass();
         $this->content->text = '';
         $badIndexes = [];
