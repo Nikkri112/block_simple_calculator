@@ -1,0 +1,161 @@
+{{!
+    This is the mustache for the time block simple calculator.
+    @template block_simple_calculator/simple_calculator
+    This template renders the entire block content.
+}}
+<script src="https://cdn.plot.ly/plotly-2.32.0.min.js" charset="utf-8"></script>
+<div class="block-calculator" style = 'flex-wrap:wrap;align-items:center'>
+    <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#exampleModal">
+        Открыть побольше
+    </button>
+    <div id='attention' style='display:none'></div>
+    <div id="tester" style = 'width:100%'></div>
+    <div class="modal" tabindex="-1" id="exampleModal" data-backdrop="true">
+        <div class="modal-dialog modal-lg w-75">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Цифровые компетенции</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div id="altTester"></div>  
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                <div>
+            </div>
+        </div>
+    </div>
+</div>
+    {{#js}}
+    modalNode = document.getElementById('exampleModal')
+    document.getElementById('exampleModal').remove()
+    attentionDiv = document.getElementById('attention')
+    resultArray = {{{results}}}
+    namesArray = []
+    console.log(resultArray)
+
+
+    function dataObjectCreate(year,array,name='',lining='solid',myopacity=0.6,mynamesarray){  
+        if(name==''){
+            name = year
+        }
+        obj={
+                type: 'scatterpolar',
+                r: array,
+                theta:mynamesarray,
+                fill: 'toself',
+                name: name,
+                opacity: myopacity,
+                hovertemplate:'%{r}%',
+                zorder: 0,
+                line:{
+                    dash:lining,
+                }
+            } 
+        return(obj)
+    }
+
+    function onlyUnique(value, index, array) {
+        return array.indexOf(value) === index;
+    }
+
+    yearsArray = []
+    tracesArray = []
+
+    lastQuizDone = false
+
+    for(let i=0;i<resultArray.length;i++){
+        yearsArray.push(parseInt(resultArray[i].year))
+    }
+    yearsArray = yearsArray.filter(onlyUnique)
+
+    for(let i=0;i<resultArray.length;i++){
+        namesArray.push(resultArray[i].testName)
+    }
+    namesArray = namesArray.filter(onlyUnique)
+
+    for(let i=0;i<yearsArray.length;i++){
+        triedThisYear = false
+        newArray = []
+	    newNamesArray = []
+        averageArray = []
+        for(let j=0;j<resultArray.length;j++){
+            if(resultArray[j].year == yearsArray[i]){            
+                newArray.push(resultArray[j].finalGrade)
+		        newNamesArray.push(resultArray[j].testName)
+                averageArray.push(resultArray[j].averageGrade)
+                if(resultArray[j].tried){
+                    triedThisYear = true
+                    }
+                }
+            }
+        console.log(newArray)
+        if(yearsArray[i]==Math.max(...yearsArray)){
+	        averageArray.push(averageArray[0])
+            tracesArray.push(dataObjectCreate(yearsArray[i],averageArray,'Среднее','dash',0.7,newNamesArray))
+        }
+        else{
+            if(triedThisYear){
+		        newArray.push(newArray[0])
+                tracesArray.push(dataObjectCreate(yearsArray[i],averageArray,`Среднее ${yearsArray[i]}`,'dash',0.7,newNamesArray))
+            }
+        }
+
+        if(triedThisYear && newArray.length==namesArray.length){
+            newArray.push(newArray[0])
+            averageArray.push(averageArray[0])
+            if(yearsArray[i]==Math.max(...yearsArray)){
+                tracesArray.push(dataObjectCreate(yearsArray[i],newArray,'Последний результат','solid',1,newNamesArray))
+                }
+            else{
+                tracesArray.push(dataObjectCreate(yearsArray[i],newArray,mynamesarray=newNamesArray))
+                }
+            }    
+        }
+    console.log(tracesArray)
+	TESTER = document.getElementById('tester');
+	    data = []
+            layout = {
+                legend:{
+                    orientation:'h',
+                    tracegroupgap:0,
+                    itemwidth:20,
+                    entrywidthmode:'pixels',
+                },
+                margin:{
+                    b:0,
+                    l:20,
+                    r:20,
+                    t:30
+                },
+                autosize:true,
+                dragmode:false,
+                polar: {
+                    radialaxis: {
+                    visible: true,
+                    range: [0, 100],
+                    tick0:0,
+                    dtick:25,
+                    tickmode:'linear',
+                    ticklabelstep:2,
+                    title:{
+                        color:'#db0f0f',
+                    }
+                    }
+            },
+            showlegend: true,
+            }
+        document.getElementById("page").appendChild(modalNode)
+        tracesArray.forEach((obj)=>data.push(obj))
+        var config = {scrollZoom:true,responsive:true}
+        Plotly.react('tester', data, layout,config);
+        Plotly.moveTraces('tester', 0);
+        $('#exampleModal').on('shown.bs.modal', function () {
+            Plotly.react('altTester', data, layout,config);
+            Plotly.moveTraces('altTester', 0);          
+        });
+    {{/js}}
+</div>
