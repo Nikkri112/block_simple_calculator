@@ -38,7 +38,7 @@
     console.log(resultArray)
 
 
-    function dataObjectCreate(year,array,name='',lining='solid',myopacity=0.6){  
+    function dataObjectCreate(year,array,name='',lining='solid',myopacity=0.6,mynamesarray){  
         if(name==''){
             name = year
         }
@@ -80,10 +80,12 @@
     for(let i=0;i<yearsArray.length;i++){
         triedThisYear = false
         newArray = []
+	newNamesArray = []
         averageArray = []
         for(let j=0;j<resultArray.length;j++){
             if(resultArray[j].year == yearsArray[i]){            
                 newArray.push(resultArray[j].finalGrade)
+		newNamesArray.push(resultArray[j].testName
                 averageArray.push(resultArray[j].averageGrade)
                 if(resultArray[j].tried){
                     triedThisYear = true
@@ -92,22 +94,22 @@
             }
         if(yearsArray[i]==Math.max(...yearsArray)){
 	    averageArray.push(averageArray[0])
-            tracesArray.push(dataObjectCreate(yearsArray[i],averageArray,'Среднее','dash',0.7))
+            tracesArray.push(dataObjectCreate(yearsArray[i],averageArray,'Среднее','dash',0.7,newNamesArray))
         }
         else{
             if(triedThisYear){
 		newArray.push(newArray[0])
-                tracesArray.push(dataObjectCreate(yearsArray[i],averageArray,`Среднее ${yearsArray[i]}`,'dash',0.7))
+                tracesArray.push(dataObjectCreate(yearsArray[i],averageArray,`Среднее ${yearsArray[i]}`,'dash',0.7,newNamesArray))
             }
         }   
         if(triedThisYear && newArray.length==namesArray.length){
             newArray.push(newArray[0])
             averageArray.push(averageArray[0])
             if(yearsArray[i]==Math.max(...yearsArray)){
-                tracesArray.push(dataObjectCreate(yearsArray[i],newArray,'Последний результат','solid',1))
+                tracesArray.push(dataObjectCreate(yearsArray[i],newArray,'Последний результат','solid',1,newNamesArray))
                 }
             else{
-                tracesArray.push(dataObjectCreate(yearsArray[i],newArray))
+                tracesArray.push(dataObjectCreate(yearsArray[i],newArray,mynamesarray=newNamesArray))
                 }
             }    
         }
