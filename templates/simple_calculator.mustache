@@ -92,9 +92,10 @@
                     }
                 }
             }
-        
+        newNamesArray.push(newNamesArray[0])
         if(yearsArray[i]==Math.max(...yearsArray)){
 	        averageArray.push(averageArray[0])
+            
             tracesArray.push(dataObjectCreate(yearsArray[i],averageArray,'Среднее','dash',0.7,mynamesarray=newNamesArray))
         }
         else{
