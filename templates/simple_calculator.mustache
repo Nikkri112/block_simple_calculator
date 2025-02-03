@@ -23,7 +23,7 @@
                     <div id="altTester"></div>  
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Закрыть</button>
                 <div>
             </div>
         </div>
@@ -154,9 +154,10 @@
         var config = {scrollZoom:true,responsive:true}
         Plotly.react('tester', data, layout,config);
         Plotly.moveTraces('tester', 0);
-        $('#exampleModal').on('shown.bs.modal', function () {
+        var modal = document.getElementById('exampleModal')
+        modal.shown = function(event){
             Plotly.react('altTester', data, layout,config);
-            Plotly.moveTraces('altTester', 0);          
-        });
+            Plotly.moveTraces('altTester', 0);
+        }
     {{/js}}
 </div>

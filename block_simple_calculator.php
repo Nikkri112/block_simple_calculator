@@ -57,7 +57,6 @@ class block_simple_calculator extends block_base {
         $altdpoquizids = [];
         $uniqueString = get_config('simple_calculator','uniqueString_setting');
 
-        //Снова проходимся по всем тестам курса и получаем ID тестов за последний год
 
         foreach($courseQuizes as $quiz){
             foreach($testnames as $name){
@@ -95,7 +94,7 @@ class block_simple_calculator extends block_base {
             $userid = $context->instanceid; // ID пользователя, чей профиль просматривается
         } else {
             // Не в контексте профиля пользователя
-            $userid = $USER->userid;
+            $userid = $USER->id;
         }
 
         //Проверяем если есть попытка в педагогическом курсе
@@ -111,6 +110,8 @@ class block_simple_calculator extends block_base {
         if($isAlt){
             $quizIds = $altQuizIds;
         }
+
+        echo $userid;
 
         function aquire_results($testid,$testname,$islastyear,$userid){
             global $DB;
@@ -253,12 +254,14 @@ class block_simple_calculator extends block_base {
             unset($quizResults[$index]);
         } 
         $quizResults = array_values($quizResults);
-
         //НУЖНОЕ
-
         $renderer = $this->page->get_renderer('block_simple_calculator');
-       
-        $this->content->text .= $renderer->render_calculator($quizResults);
+        if(count($quizResults)!=0){
+            $this->content->text .= $renderer->render_calculator($quizResults);
+        }
+        else{
+            $this->content->text .= "Что то пошло не так";
+        }
         return $this->content;
     }
     function has_config() {
