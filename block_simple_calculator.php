@@ -57,7 +57,6 @@ class block_simple_calculator extends block_base {
         $altdpoquizids = [];
         $uniqueString = get_config('simple_calculator','uniqueString_setting');
 
-
         foreach($courseQuizes as $quiz){
             foreach($testnames as $name){
                 if(str_contains($quiz->name,$name) && str_contains($quiz->name,$uniqueString)){
@@ -89,14 +88,20 @@ class block_simple_calculator extends block_base {
                 }
             }
         }
-
+        $quiz_attempt = $DB->get_record('quiz_attempts', ['quiz' => $quizIds[0]]);
+        $question_usageid = $quiz_attempt->uniqueid;
+        $question_attempt = $DB->get_record('question_attempts',['questionusageid'=>$question_usageid,'slot'=>1]);
+        $question_answers_obj = $DB->get_records('question_answers',['question'=>$question_attempt->questionid,'feedback'=>1]);
+        $question_answers = [];
+        foreach ($question_answers_obj as $qa){
+            array_push($question_answers,$qa->answer);
+        }
         if ($context->contextlevel == CONTEXT_USER) {
             $userid = $context->instanceid; // ID пользователя, чей профиль просматривается
         } else {
             // Не в контексте профиля пользователя
             $userid = $USER->id;
         }
-
         //Проверяем если есть попытка в педагогическом курсе
         $isAlt = true;
         foreach($quizIds as $testid){
@@ -111,21 +116,10 @@ class block_simple_calculator extends block_base {
             $quizIds = $altQuizIds;
         }
 
-        echo $userid;
-
-        function aquire_results($testid,$testname,$islastyear,$userid){
+        function aquire_results($testid,$testname,$userid,$answer=NULL){
             global $DB;
-            $results = [];
-            $i = 0;
-
             //Получаем попытки прохождения теста
-
-            try{
-                $attempts = $DB->get_records('quiz_attempts', array('quiz' => $testid));
-            }catch(Exception $e){
-                echo $e->getMessage();
-            }
-
+            $attempts = $DB->get_records('quiz_attempts', array('quiz' => $testid));
             //Получаем максимальный балл  
             $quiz = $DB->get_record('quiz',['id'=>$testid]);
             if($quiz->sumgrades!=0){
@@ -142,7 +136,26 @@ class block_simple_calculator extends block_base {
             $userAttempts = [];
             $finalgrade = 0;
             if(!is_null($attempts)){
-                if (count($attempts)>0) {
+                if(!is_null($answer)){
+                    foreach ($attempts as $attempt){
+                        $uid = $attempt->uniqueid;
+                        $qat = $DB->get_record('question_attempts', ['questionusageid' => $uid, 'slot' => 1]);
+                        if($qat!=false){
+                            if(str_contains(mb_stristr($qat->responsesummary,'}',true),$answer)){
+                                array_push($median,$attempt->sumgrades);
+                                $attemptcounter +=1; 
+                                sort($median);
+                                if(count($median)%2==0){
+                                    $medianfinal = ($median[floor((count($median)-1)/2)]+$median[ceil((count($median)-1)/2)])/2;
+                                }
+                                else{
+                                    $medianfinal = $median[ceil((count($median)-1)/2)];
+                                }   
+                            }  
+                        }
+                    }
+                }
+                else {
                     //Считаем среднее и получаем попытки пользователя
                     foreach($attempts as $attempt){
                         array_push($median,$attempt->sumgrades);
@@ -180,10 +193,6 @@ class block_simple_calculator extends block_base {
 
             $finalgrade = ($finalgrade/$maxGrade)*100;
             $medianfinal = ($medianfinal/$maxGrade)*100;
-
-            //Если мы рассматриваем результаты последнего года, то выводим среднее и предыдущий результат текущего года
-            //А если рассматриваем результаты предыдущих годов то выводим только результат, год и название
-
             $results = (object) 
                 ['finalGrade'=>$finalgrade,
                 'averageGrade'=>$medianfinal,
@@ -194,11 +203,15 @@ class block_simple_calculator extends block_base {
                 'prevYearResults'=>[],
                 'tried' =>$tried,
                 'timecreated' =>$quiz->timecreated,
+                'response' => $answer,
+                'attemptcounter'=>$attemptcounter,
                 ];
-            $i++;
-            return $results;
+        return $results;
         };
-        $quizResults = []; 
+        $quizResults = (object)[
+            "resultarray" => [],
+            "responsearray" => [],
+        ];  
         foreach($quizIds as $quizid){
             $quiz = $DB->get_record('quiz',['id'=>$quizid]);   
             $quizname = $quiz->name;
@@ -207,11 +220,13 @@ class block_simple_calculator extends block_base {
                     $quizname = $name;
                 }
             }
-            array_push($quizResults, aquire_results($quizid,$quizname,true,$userid));
+            
+            array_push($quizResults->resultarray, aquire_results($quizid,$quizname,$userid));
+            foreach($question_answers as $qa){
+                array_push($quizResults->responsearray,aquire_results($quizid,$quizname,$userid,$qa));
+            }
         }
-
         $dpoquizresults = [];
-
         foreach($dpoquizids as $quizid){
             $quiz = $DB->get_record('quiz',['id'=>$quizid]);   
             $quizname = $quiz->name;
@@ -220,11 +235,11 @@ class block_simple_calculator extends block_base {
                     $quizname = $name;
                 }
             }
-            array_push($dpoquizresults, aquire_results($quizid,$quizname,true,$userid));
+            array_push($dpoquizresults, aquire_results($quizid,$quizname,$userid));
         }
 
         foreach($dpoquizresults as $dpores){
-            foreach($quizResults as $res){
+            foreach($quizResults->resultarray as $res){
                 if(($dpores->testName == $res->testName) && ($dpores->year==$res->year) && ($dpores->tried)){
                     $res->finalGrade=$dpores->finalGrade;
                     $res->averageGrade=$dpores->averageGrade;
@@ -236,11 +251,11 @@ class block_simple_calculator extends block_base {
         $this->content = new stdClass();
         $this->content->text = '';
         $badIndexes = [];
-        for($i=0;$i<count($quizResults);$i++){
-            for($j=$i;$j<count($quizResults);$j++){
-                if($quizResults[$i]->quizId!=$quizResults[$j]->quizId){
-                    if(($quizResults[$i]->testName==$quizResults[$j]->testName) && ($quizResults[$i]->year==$quizResults[$j]->year)){
-                        if($quizResults[$i]->timecreated>=$quizResults[$j]->timecreated){
+        for($i=0;$i<count($quizResults->resultarray);$i++){
+            for($j=$i;$j<count($quizResults->resultarray);$j++){
+                if($quizResults->resultarray[$i]->quizId!=$quizResults->resultarray[$j]->quizId){
+                    if(($quizResults->resultarray[$i]->testName==$quizResults->resultarray[$j]->testName) && ($quizResults->resultarray[$i]->year==$quizResults[$j]->year)){
+                        if($quizResults->resultarray[$i]->timecreated>=$quizResults->resultarray[$j]->timecreated){
                             array_push($badIndexes,$j);
                         }
                         else{
@@ -251,12 +266,12 @@ class block_simple_calculator extends block_base {
             }
         }
         foreach($badIndexes as $index){
-            unset($quizResults[$index]);
+            unset($quizResults->resultarray[$index]);
         } 
-        $quizResults = array_values($quizResults);
+        $quizResults->resultarray = array_values($quizResults->resultarray);
         //НУЖНОЕ
         $renderer = $this->page->get_renderer('block_simple_calculator');
-        if(count($quizResults)!=0){
+        if(count($quizResults->resultarray)!=0){
             $this->content->text .= $renderer->render_calculator($quizResults);
         }
         else{

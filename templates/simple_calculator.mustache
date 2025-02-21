@@ -16,10 +16,11 @@
                 <div class="modal-header">
                     <h5 class="modal-title">Цифровые компетенции</h5>
                     <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
+                    <span aria-hidden="false">&times;</span>
                     </button>
                 </div>
                 <div class="modal-body">
+                    <div id="ddown"><div>
                     <div id="altTester"></div>  
                 </div>
                 <div class="modal-footer">
@@ -33,10 +34,11 @@
     modalNode = document.getElementById('exampleModal')
     document.getElementById('exampleModal').remove()
     attentionDiv = document.getElementById('attention')
-    resultArray = {{{results}}}
-    namesArray = []
+    results = {{{results}}}
+    resultArray = results.resultarray
     console.log(resultArray)
-
+	respResultArray = results.responsearray
+	console.log(respResultArray)
 
     function dataObjectCreate(year,array,name='',lining='solid',myopacity=0.6,mynamesarray){  
         if(name==''){
@@ -61,64 +63,91 @@
     function onlyUnique(value, index, array) {
         return array.indexOf(value) === index;
     }
+    function createTraces(resArray){
+        yearsArray = []
+        tracesArray = []
+        namesArray = []
+        lastQuizDone = false
 
-    yearsArray = []
-    tracesArray = []
+        for(let i=0;i<resArray.length;i++){
+            yearsArray.push(parseInt(resArray[i].year))
+        }
+        yearsArray = yearsArray.filter(onlyUnique)
 
-    lastQuizDone = false
+        for(let i=0;i<resArray.length;i++){
+            namesArray.push(resArray[i].testName)
+        }
+        namesArray = namesArray.filter(onlyUnique)
 
-    for(let i=0;i<resultArray.length;i++){
-        yearsArray.push(parseInt(resultArray[i].year))
-    }
-    yearsArray = yearsArray.filter(onlyUnique)
-
-    for(let i=0;i<resultArray.length;i++){
-        namesArray.push(resultArray[i].testName)
-    }
-    namesArray = namesArray.filter(onlyUnique)
-
-    for(let i=0;i<yearsArray.length;i++){
-        triedThisYear = false
-        newArray = []
-	    newNamesArray = []
-        averageArray = []
-        for(let j=0;j<resultArray.length;j++){
-            if(resultArray[j].year == yearsArray[i]){            
-                newArray.push(resultArray[j].finalGrade)
-		        newNamesArray.push(resultArray[j].testName)
-                averageArray.push(resultArray[j].averageGrade)
-                if(resultArray[j].tried){
-                    triedThisYear = true
+        for(let i=0;i<yearsArray.length;i++){
+            triedThisYear = false
+            newArray = []
+            newNamesArray = []
+            averageArray = []
+            for(let j=0;j<resArray.length;j++){
+                if(resArray[j].year == yearsArray[i]){            
+                    newArray.push(resArray[j].finalGrade)
+                    newNamesArray.push(resArray[j].testName)
+                    averageArray.push(resArray[j].averageGrade)
+                    if(resArray[j].tried){
+                        triedThisYear = true
+                        }
                     }
                 }
-            }
-        newNamesArray.push(newNamesArray[0])
-        if(yearsArray[i]==Math.max(...yearsArray)){
-	        averageArray.push(averageArray[0])
-            
-            tracesArray.push(dataObjectCreate(yearsArray[i],averageArray,'Среднее','dash',0.7,mynamesarray=newNamesArray))
-        }
-        else{
-            if(triedThisYear){
-		        averageArray.push(averageArray[0])
-                tracesArray.push(dataObjectCreate(yearsArray[i],averageArray,`Среднее ${yearsArray[i]}`,'dash',0.7,mynamesarray=newNamesArray))
-                console.log(averageArray)
-            }
-        }
-        if(triedThisYear && newArray.length==namesArray.length){
-            newArray.push(newArray[0])
-            averageArray.push(averageArray[0])
+            newNamesArray.push(newNamesArray[0])
             if(yearsArray[i]==Math.max(...yearsArray)){
-                tracesArray.push(dataObjectCreate(yearsArray[i],newArray,'Последний результат','solid',1,mynamesarray=newNamesArray))
-                }
+                averageArray.push(averageArray[0])
+                tracesArray.push(dataObjectCreate(yearsArray[i],averageArray,'Среднее','dash',0.7,mynamesarray=newNamesArray))
+            }
             else{
-                tracesArray.push(dataObjectCreate(yearsArray[i],newArray,'','solid',0.7,mynamesarray=newNamesArray))
+                if(triedThisYear){
+                    averageArray.push(averageArray[0])
+                    tracesArray.push(dataObjectCreate(yearsArray[i],averageArray,`Среднее ${yearsArray[i]}`,'dash',0.7,mynamesarray=newNamesArray))
+                    console.log(averageArray)
                 }
-            }    
+            }
+            if(triedThisYear && newArray.length==namesArray.length){
+                newArray.push(newArray[0])
+                averageArray.push(averageArray[0])
+                if(yearsArray[i]==Math.max(...yearsArray)){
+                    tracesArray.push(dataObjectCreate(yearsArray[i],newArray,'Последний результат','solid',1,mynamesarray=newNamesArray))
+                    }
+                else{
+                    tracesArray.push(dataObjectCreate(yearsArray[i],newArray,'','solid',0.7,mynamesarray=newNamesArray))
+                    }
+                }    
+            }
+        return tracesArray
+    }
+
+    mytracesArray = createTraces(resultArray)
+    responses = []
+    for(let i=0;i<respResultArray.length;i++){
+        responses.push(respResultArray[i].response)
+    }
+    responses = responses.filter(onlyUnique)
+    responsesdata = []
+	console.log(responses)
+    for(let i = 0;i<responses.length;i++){
+        newArray = []
+        for(let j=0;j<respResultArray.length;j++){
+            if(respResultArray[j].response==responses[i]){
+                newArray.push(respResultArray[j])
+            }
         }
-    console.log(tracesArray)
+        responsesdata.push(newArray)
+    }
+    console.log(responsesdata)
+    choicesArray = []
+    choicesArray.push(mytracesArray)
+    responsesdata.forEach((obj)=>{
+        choicesArray.push(createTraces(obj))
+    })
+    console.log(choicesArray)
+    
 	TESTER = document.getElementById('tester');
-	    data = []
+    function datacreate(tracearray){
+        this.data = []
             layout = {
                 legend:{
                     orientation:'h',
@@ -149,15 +178,43 @@
             },
             showlegend: true,
             }
+        tracearray.forEach((obj)=>this.data.push(obj))
+        return this.data
+    }
         document.getElementById("page").appendChild(modalNode)
-        tracesArray.forEach((obj)=>data.push(obj))
+
+        dropdownSlot = document.getElementById('ddown')
+        console.log(document.getElementById('ddown'))
+
+        dropdown = document.createElement('select')
+        defaultOption = new Option("Общие результаты", 0)
+        defaultOption.setAttribute('selected','selected')
+        dropdown.add(defaultOption)
+        responses.forEach((text,index)=>{
+            option = new Option(text,index+1);
+            dropdown.add(option);
+        })
+        dropdownSlot.prepend(dropdown)
+
+        dropdown.addEventListener('change', function (){
+            const selectedIndex = dropdown.value;
+            const changeData = choicesArray[selectedIndex]
+            Plotly.react('altTester', changeData, layout,config);
+            Plotly.moveTraces('altTester', 0);
+        })
+
+        basedata = datacreate(choicesArray[0])
+
         var config = {scrollZoom:true,responsive:true}
-        Plotly.react('tester', data, layout,config);
+        Plotly.react('tester', basedata, layout,config);
         Plotly.moveTraces('tester', 0);
         var modal = document.getElementById('exampleModal')
+        mydata = datacreate(choicesArray[0])
         modal.shown = function(event){
-            Plotly.react('altTester', data, layout,config);
+            Plotly.react('altTester', mydata, layout,config);
             Plotly.moveTraces('altTester', 0);
         }
+        
+        
     {{/js}}
 </div>
