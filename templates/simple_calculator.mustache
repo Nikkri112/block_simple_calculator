@@ -20,7 +20,10 @@
                     </button>
                 </div>
                 <div class="modal-body">
-                    <div id="ddown"><div>
+                    <div class="d-flex justify-content-between">
+                        <div id="ddown"></div>
+                        <div id="attemptcounter"></div>
+                    </div>
                     <div id="altTester"></div>  
                 </div>
                 <div class="modal-footer">
@@ -39,6 +42,7 @@
     console.log(resultArray)
 	respResultArray = results.responsearray
 	console.log(respResultArray)
+    
 
     function dataObjectCreate(year,array,name='',lining='solid',myopacity=0.6,mynamesarray){  
         if(name==''){
@@ -110,7 +114,7 @@
                 newArray.push(newArray[0])
                 averageArray.push(averageArray[0])
                 if(yearsArray[i]==Math.max(...yearsArray)){
-                    tracesArray.push(dataObjectCreate(yearsArray[i],newArray,'Последний результат','solid',1,mynamesarray=newNamesArray))
+                    tracesArray.push(dataObjectCreate(yearsArray[i],newArray,'Личный результат','solid',1,mynamesarray=newNamesArray))
                     }
                 else{
                     tracesArray.push(dataObjectCreate(yearsArray[i],newArray,'','solid',0.7,mynamesarray=newNamesArray))
@@ -122,6 +126,12 @@
 
     mytracesArray = createTraces(resultArray)
     responses = []
+    attcounter = []
+    newattcounter = 0
+    resultArray.forEach((obj)=>{
+        newattcounter+=obj.attemptcounter
+    })
+    attcounter.push(newattcounter)
     for(let i=0;i<respResultArray.length;i++){
         responses.push(respResultArray[i].response)
     }
@@ -129,14 +139,18 @@
     responsesdata = []
 	console.log(responses)
     for(let i = 0;i<responses.length;i++){
+        newattcounter = 0
         newArray = []
         for(let j=0;j<respResultArray.length;j++){
             if(respResultArray[j].response==responses[i]){
                 newArray.push(respResultArray[j])
+                newattcounter = newattcounter+respResultArray[j].attemptcounter
             }
         }
         responsesdata.push(newArray)
+        attcounter.push(newattcounter)
     }
+    console.log(attcounter)
     console.log(responsesdata)
     choicesArray = []
     choicesArray.push(mytracesArray)
@@ -196,9 +210,13 @@
         })
         dropdownSlot.prepend(dropdown)
 
+        attemptcounter = document.getElementById('attemptcounter')
+        attemptcounter.innerHTML = `Всего попыток тестирования: ${attcounter[0]}`
+
         dropdown.addEventListener('change', function (){
             const selectedIndex = dropdown.value;
             const changeData = choicesArray[selectedIndex]
+            attemptcounter.innerHTML = `Всего попыток тестирования: ${attcounter[selectedIndex]}` 
             Plotly.react('altTester', changeData, layout,config);
             Plotly.moveTraces('altTester', 0);
         })
