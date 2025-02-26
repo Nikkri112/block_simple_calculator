@@ -88,13 +88,20 @@ class block_simple_calculator extends block_base {
                 }
             }
         }
-        $quiz_attempt = $DB->get_record('quiz_attempts', ['quiz' => $quizIds[0]]);
+        $quiz_attempt = $DB->get_record('quiz_attempts', array('quiz' => $quizIds[0]));
         $question_usageid = $quiz_attempt->uniqueid;
-        $question_attempt = $DB->get_record('question_attempts',['questionusageid'=>$question_usageid,'slot'=>1]);
-        $question_answers_obj = $DB->get_records('question_answers',['question'=>$question_attempt->questionid,'feedback'=>1]);
+        $question_attempt = $DB->get_records('question_attempts',array('questionusageid'=>$question_usageid));
+        foreach ($question_attempt as $qa){
+            if($qa->slot == 1){
+                $question_attempt = $qa->questionid;
+            }
+        }
+        $question_answers_obj = $DB->get_records('question_answers',array('question'=>$question_attempt));
         $question_answers = [];
         foreach ($question_answers_obj as $qa){
-            array_push($question_answers,$qa->answer);
+            if($qa->feedback == 1){
+                array_push($question_answers,$qa->answer);
+            }
         }
         if ($context->contextlevel == CONTEXT_USER) {
             $userid = $context->instanceid; // ID пользователя, чей профиль просматривается
@@ -139,7 +146,7 @@ class block_simple_calculator extends block_base {
                 if(!is_null($answer)){
                     foreach ($attempts as $attempt){
                         $uid = $attempt->uniqueid;
-                        $qat = $DB->get_record('question_attempts', ['questionusageid' => $uid, 'slot' => 1]);
+                        $qat = $DB->get_record('question_attempts', array('questionusageid' => $uid, 'slot' => 1));
                         if($qat!=false){
                             if(str_contains(mb_stristr($qat->responsesummary,'}',true),$answer)){
                                 array_push($median,$attempt->sumgrades);
