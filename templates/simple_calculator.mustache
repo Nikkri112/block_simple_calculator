@@ -42,7 +42,19 @@
     console.log(resultArray)
 	respResultArray = results.responsearray
 	console.log(respResultArray)
-    
+    function mysort(a,b){
+        if(a.testName.toUpperCase() < b.testName.toUpperCase()){
+            return -1
+        }
+        if(a.testName.toUpperCase() > b.testName.toUpperCase()){
+            return 1
+        }
+        return 0
+    }
+    resultArray.sort(mysort)
+    respResultArray.sort(mysort)
+    console.log(respResultArray)
+    console.log(resultArray)
 
     function dataObjectCreate(year,array,name='',lining='solid',myopacity=0.6,mynamesarray){  
         if(name==''){
