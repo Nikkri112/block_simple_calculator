@@ -111,25 +111,16 @@
                     }
                 }
             newNamesArray.push(newNamesArray[0])
-            if(yearsArray[i]==Math.max(...yearsArray)){
-                averageArray.push(averageArray[0])
-                tracesArray.push(dataObjectCreate(yearsArray[i],averageArray,'Среднее','dash',0.7,mynamesarray=newNamesArray))
-            }
-            else{
-                if(triedThisYear){
-                    averageArray.push(averageArray[0])
-                    tracesArray.push(dataObjectCreate(yearsArray[i],averageArray,`Среднее ${yearsArray[i]}`,'dash',0.7,mynamesarray=newNamesArray))
-                    console.log(averageArray)
-                }
-            }
-            if(triedThisYear && newArray.length==namesArray.length){
+            averageArray.push(averageArray[0])
+            tracesArray.push(dataObjectCreate(yearsArray[i],averageArray,`Среднее ${yearsArray[i]}`,'dash',0.7,mynamesarray=newNamesArray))
+            if(newArray.length==namesArray.length){
                 newArray.push(newArray[0])
                 averageArray.push(averageArray[0])
                 if(yearsArray[i]==Math.max(...yearsArray)){
-                    tracesArray.push(dataObjectCreate(yearsArray[i],newArray,'Личный результат','solid',1,mynamesarray=newNamesArray))
+                    tracesArray.push(dataObjectCreate(yearsArray[i],newArray,`Личный результат ${yearsArray[i]}`,'solid',1,mynamesarray=newNamesArray))
                     }
                 else{
-                    tracesArray.push(dataObjectCreate(yearsArray[i],newArray,'','solid',0.7,mynamesarray=newNamesArray))
+                    tracesArray.push(dataObjectCreate(yearsArray[i],newArray,`Личный результат ${yearsArray[i]}`,'solid',0.7,mynamesarray=newNamesArray))
                     }
                 }    
             }

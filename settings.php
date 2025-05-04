@@ -43,5 +43,12 @@ if ($hassiteconfig) {
         '',  // Значение по умолчанию
         PARAM_TEXT // Тип данных
     ));
+    $settings->add(new admin_setting_configtext(
+        'simple_calculator/question_name_setting',   // Имя настройки
+        get_string('question_name', 'block_simple_calculator'), // Название настройки (отображается на странице)
+        get_string('question_name_desc', 'block_simple_calculator'), // Описание настройки
+        'установочные данные',  // Значение по умолчанию
+        PARAM_TEXT // Тип данных
+    ));
     $ADMIN->add('localplugins', $settings);
 }

@@ -25,6 +25,8 @@
 
 class block_simple_calculator extends block_base {
 
+
+
     /**
      * Initializes class member variables.
      */
@@ -39,6 +41,7 @@ class block_simple_calculator extends block_base {
      * @return stdClass The block contents.
      */
     public function get_content() {
+        include(__DIR__."/lib.php");
         if ($this->content !== null) {
             return $this->content;
         }
@@ -57,95 +60,31 @@ class block_simple_calculator extends block_base {
         $altQuizIds = [];
         $dpoquizids = [];
         $altdpoquizids = [];
+
+
         $uniqueString = get_config('simple_calculator','uniqueString_setting');
+        $questionname = get_config('simple_calculator','question_name_setting');
 
 
-        //Получаем id тестов курса преподавателей
-
-        foreach($courseQuizes as $quiz){
-            foreach($testnames as $name){
-                if(str_contains(strtolower($quiz->name),strtolower($name)) && str_contains(strtolower($quiz->name),$uniqueString)){
-                    array_push($quizIds,$quiz->id);
-                }
-            }
-        }
-
-
-        //Получаем id тестов курса сотрудников
-
-        foreach($altCourseQuizes as $quiz){
-            foreach($testnames as $name){
-                if(str_contains($quiz->name,$name) && str_contains($quiz->name,$uniqueString)){
-                    array_push($altQuizIds,$quiz->id);
-                }
-            }
-        }
-
-        //Получаем id дпо тестов курса преподавателей
-
-        foreach($courseQuizes as $quiz){
-            foreach($testnames as $name){
-                if(str_contains($quiz->name,$name) && str_contains($quiz->name,'*')){
-                    array_push($dpoquizids,$quiz->id);
-                }
-            }
-        }
-
-        //Получаем id дпо тестов курса сотрудников
-
-        foreach($altCourseQuizes as $quiz){
-            foreach($testnames as $name){
-                if(str_contains($quiz->name,$name) && str_contains($quiz->name,'*')){
-                    array_push($altdpoquizids,$quiz->id);
-                }
-            }
-        }
-
-        //Получаем попытки прохождения одного из тестов
-        foreach($quizIds as $qid){
-            $quiz_attempt = $DB->get_record('quiz_attempts', array('quiz' => $qid), "*", IGNORE_MULTIPLE);
-            if($quiz_attempt!=false){
-                $question_usageid = $quiz_attempt->uniqueid;
-                $question_attempt = $DB->get_records('question_attempts',array('questionusageid'=>$question_usageid));
-                if(!empty($question_attempt)){
-                    foreach ($question_attempt as $qa){
-                        if($qa->slot == 1){
-                            $question_attempt = $qa->questionid;
-                        }
-                    }
-                }
-                break;
-            }
-        }
-
-        //Получаем список ответов на первый вопрос
-
-        $question_answers_obj = $DB->get_records('question_answers',array('question'=>$question_attempt));
-        $question_answers = [];
-        foreach ($question_answers_obj as $qa){
-            if($qa->feedback == 1){
-                array_push($question_answers,$qa->answer);
-            }
-        }
+        $quizIds = extract_needed_quizes($courseQuizes,$testnames,$uniqueString);
+        $altQuizIds = extract_needed_quizes($altCourseQuizes,$testnames,$uniqueString);
+        $dpoquizids = dpo_extract_needed_quizes($courseQuizes,$testnames);
+        $altdpoquizids = dpo_extract_needed_quizes($altCourseQuizes,$testnames);
         
         //ID пользователя в зависимости от контекста
-
         try {
-
             // Получаем ID пользователя с автоматической валидацией
-
-            $userid = $this->get_user_id_from_course_context();
+            $userid = get_user_id_from_course_context();
         } 
         catch (moodle_exception $e) {
-            $this->content->text = $this->render_error($e);
+            $this->content->text = render_error($e);
         }
-
 
         //Выявляем к какому курсу принадлежит пользователь
 
         $isAlt = true;
         foreach($quizIds as $testid){
-            $attempts = $DB->get_records('quiz_attempts', array('quiz' => $testid));
+            $attempts = $DB->get_records('quiz_attempts', array('quiz' => $testid->id));
             foreach($attempts as $attempt){
                 if($attempt->userid == $userid){
                     $isAlt = false;
@@ -157,177 +96,47 @@ class block_simple_calculator extends block_base {
         }
 
 
-        //Функция для получения результатов
-
-        function aquire_results($testid,$testname,$userid,$answer=NULL){
-            global $DB;
-
-            //Получаем попытки прохождения теста
-
-            $attempts = $DB->get_records('quiz_attempts', array('quiz' => $testid));
-
-            //Получаем максимальный балл  
-
-            $quiz = $DB->get_record('quiz',['id'=>$testid]);
-            if($quiz->sumgrades!=0){
-                $maxGrade = $quiz->sumgrades;
-            }
-            else{
-                $maxGrade =1; 
-            }
-
-            $quizYear = date('Y',$quiz->timecreated);
-            $median = [];
-            $medianfinal =0;
-            $attemptcounter = 0;
-            $userAttempts = [];
-            $finalgrade = 0;
-
-            if(!empty($attempts)){
-                if(!is_null($answer)){
-                    foreach ($attempts as $attempt){
-                        $uid = $attempt->uniqueid;
-                        $qat = $DB->get_record('question_attempts', array('questionusageid' => $uid, 'slot' => 1));
-                        if($qat!=false){
-                            if(str_contains(mb_stristr($qat->responsesummary,'}',true),$answer)){
-                                array_push($median,$attempt->sumgrades);
-                                $attemptcounter +=1; 
-                            }  
-                        }
-                    }
-                    sort($median);
-                    if(count($median)%2==0 && count($median)!=0){
-                        if(floor((count($median)-1)/2)>0){
-                            $medianfinal = ($median[floor((count($median)-1)/2)]+$median[ceil((count($median)-1)/2)])/2;
-                        }
-                        else{
-                            $medianfinal = $median[0];
-                        }
-                    }
-                    else{
-                        if(count($median)!=0){
-                            if(floor((count($median)-1)/2)>0){
-                                $medianfinal = $median[ceil((count($median)-1)/2)];
-                            }
-                            else{
-                                $medianfinal = $median[0];
-                            }
-                        }
-                    }
-                }
-                else {
-
-                    //В случае если не указан вариант ответа собираем общие данные
-
-                    foreach($attempts as $attempt){
-                        array_push($median,$attempt->sumgrades);
-                        $attemptcounter +=1; 
-                        if($attempt->userid == $userid){
-                            array_push($userAttempts,$attempt);
-                        }
-                    }
-                    sort($median);
-                    if(count($median)%2==0 && count($median)!=0){
-                        if(floor((count($median)-1)/2)>0){
-                        $medianfinal = ($median[floor((count($median)-1)/2)]+$median[ceil((count($median)-1)/2)])/2;
-                        }
-                        else{
-                            $medianfinal = $median[0];
-                        }
-                    }
-                    else{
-                        if(count($median)!=0){
-                            if(floor((count($median)-1)/2)>0){
-                                $medianfinal = $median[ceil((count($median)-1)/2)];
-                            }
-                            else{
-                                $medianfinal = $median[0];
-                            }
-                        }
-                    }     
+        $question_parent = extract_question_parent($quizIds,$questionname);
+        $question_answers = [];
+        if($question_parent){
+            $question_ids = extract_question_children($question_parent);
+            if(!empty($question_ids)){
+                foreach($question_ids as $id){
+                    array_push($question_answers, extract_question_answers($id));
                 }
             }
+        }
 
-            //На случай если попыток нету чисто в принципе
-
-            else{
-                $finalgrade = 0;
-                $medianfinal = 0;
+        $groupedbyyear = sort_by_year_quizes($quizIds);
+        $quizres = [];
+        $answquizres = [];
+        foreach($groupedbyyear as $grp){
+            foreach($grp as $id){
+                if(is_quiz_with_question($id,$question_parent)){
+                    $res = get_users_answers($id->id,$question_answers[0],"part 2");
+                }
             }
-            if(count($userAttempts)!=0){
-                $tried = true;
-                $finalgrade = end($userAttempts)->sumgrades;
+            foreach($grp as $id){
+                array_push($quizres,get_results_all($id,$userid));
+                foreach($res as $r){
+                    array_push($answquizres,get_results_answers($id,$r));
+                }
             }
-            else{
-                $finalgrade = 0;
-                $tried = false;
-            }
-
-            //Если это тест дпо -- год устанавливаем год в соответствии с названием
-
-            if(str_contains($quiz->name,'*')){
-                $quizYear=substr($quiz->name,strpos($quiz->name,'*')-4,4);
-            }
-
-            //Считаем результаты теста в процентах
-
-            $finalgrade = ($finalgrade/$maxGrade)*100;
-            $medianfinal = ($medianfinal/$maxGrade)*100;
-
-            //Результат в виде объекта
-
-            $results = (object) 
-                ['finalGrade'=>$finalgrade,
-                'averageGrade'=>$medianfinal,
-                'testName'=>$testname,
-                'quizId' =>$testid,
-                'year'=>$quizYear,
-                'tried' =>$tried,
-                'timecreated' =>$quiz->timecreated,
-                'response' => $answer,
-                'attemptcounter'=>$attemptcounter,
-                ];
-        return $results;
-        };
+        }
 
         //Задаем формат объекта результатов
 
         $quizResults = (object)[
-            "resultarray" => [],
-            "responsearray" => [],
+            "resultarray" => $quizres,
+            "responsearray" => $answquizres,
         ];  
 
         //Проходимся по каждому id и получаем обработанные данные
         //записываем эти данные в массив
-
-        foreach($quizIds as $quizid){
-            $quiz = $DB->get_record('quiz',['id'=>$quizid]);
-            if($quiz!=false){   
-                $quizname = $quiz->name;
-                foreach($testnames as $name){
-                    if(str_contains(strtolower($quizname),strtolower($name))){
-                        $quizname = $name;
-                    }
-                }
-                array_push($quizResults->resultarray, aquire_results($quizid,$quizname,$userid));
-                foreach($question_answers as $qa){
-                    array_push($quizResults->responsearray,aquire_results($quizid,$quizname,$userid,$qa));
-                }
-            }
-        }
         $dpoquizresults = [];
         foreach($dpoquizids as $quizid){
-            $quiz = $DB->get_record('quiz',['id'=>$quizid]); 
-            if($quiz!=false){
-                $quizname = $quiz->name;
-                foreach($testnames as $name){
-                    if(str_contains(strtolower($quizname),strtolower($name))){
-                        $quizname = $name;
-                    }
-                }
-                array_push($dpoquizresults, aquire_results($quizid,$quizname,$userid));
-            }  
-        }
+            array_push($dpoquizresults, get_results_all($quizid,$userid));
+        }  
 
         foreach($dpoquizresults as $dpores){
             foreach($quizResults->resultarray as $res){
@@ -353,115 +162,10 @@ class block_simple_calculator extends block_base {
         //Вывод контента
         return $this->content;
     }
+
     function has_config() {
         return true;
     }
-
-    private function validate_context_and_user($context, $default_userid) {
-        // 1. Validate context object structure
-        if (!is_object($context)) {
-            throw new moodle_exception('invalidcontextobject', 'block_simple_calculator');
-        }
-        
-        // 3. Validate context level
-        $valid_context_levels = [CONTEXT_SYSTEM, CONTEXT_COURSE, CONTEXT_MODULE, CONTEXT_BLOCK, CONTEXT_USER];
-        if (!in_array($context->contextlevel, $valid_context_levels)) {
-            throw new moodle_exception('invalidcontextlevel', 'block_simple_calculator');
-        }
-        
-        // 4. Determine user ID based on context
-        $userid = $default_userid;
-        if ($context->contextlevel == CONTEXT_USER) {
-            $userid = $context->instanceid;
-            
-            // Additional validation for user context
-            if ($userid == $default_userid) {
-                throw new moodle_exception('selfcontextonly', 'block_simple_calculator');
-            }
-        }
-        
-        // 5. Validate user ID
-        return $this->validate_user_id($userid);
-    }
-    
-    /**
-     * Validate user ID
-     * 
-     * @param int $userid User ID to validate
-     * @return int Validated user ID
-     * @throws moodle_exception
-     */
-    private function validate_user_id($userid) {
-        global $DB;
-        
-        // 1. Basic type and range check
-        if (!is_number($userid) || $userid <= 0) {
-            throw new moodle_exception('invaliduserid', 'block_simple_calculator');
-        }
-        
-        // 2. Check if user exists in database
-        if (!$DB->record_exists('user', ['id' => $userid, 'deleted' => 0])) {
-            throw new moodle_exception('usernotfound', 'block_simple_calculator');
-        }
-        
-        // 3. Check if user is suspended
-        if ($DB->get_field('user', 'suspended', ['id' => $userid])) {
-            throw new moodle_exception('usersuspended', 'block_simple_calculator');
-        }
-        
-        return (int)$userid;
-    }
-
-    private function render_error($exception) {
-        return html_writer::div(
-            get_string('erroroccurred', 'block_simple_calculator') . $exception->getMessage(),
-            'alert alert-danger'
-        );
-    }
-
-    protected function get_user_id_from_course_context() {
-        global $PAGE, $USER;
-        
-        $context = $PAGE->context;
-        
-        // 2. Check context level and get user ID
-        switch ($context->contextlevel) {
-            case CONTEXT_COURSE:
-                // For course context - always return current user
-                return $this->validate_user_id($USER->id);
-                
-            case CONTEXT_USER:
-                // For user profile context - return profile owner
-                return $this->validate_user_id($context->instanceid);
-                
-            case CONTEXT_BLOCK:
-                // For block context - check parent contexts
-                return $this->get_user_id_from_block_context($context);
-                
-            default:
-                throw new moodle_exception('unsupportedcontext', 'block_simple_calculator', '', context_helper::get_level_name($context->contextlevel));
-        }
-    }
-    
-    private function get_user_id_from_block_context($context) {
-        global $USER;
-        
-        // Get parent context (course or user)
-        $parentcontext = $context->get_parent_context();
-        
-        switch ($parentcontext->contextlevel) {
-            case CONTEXT_COURSE:
-                return $this->validate_user_id($USER->id);
-                
-            case CONTEXT_USER:
-                return $this->validate_user_id($parentcontext->instanceid);
-                
-            default:
-                throw new moodle_exception('invalidparentcontext', 'block_simple_calculator');
-        }
-    }
-    
-
     /**
      * Defines configuration data.
      *
